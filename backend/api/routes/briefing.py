@@ -2,7 +2,7 @@
 Briefing routes for LifeSync API
 """
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Query, Path
 from typing import Optional, List
 from datetime import datetime
 from services.firestore import firestore_service
@@ -10,11 +10,11 @@ from services.firestore import firestore_service
 router = APIRouter()
 
 @router.get("/briefing/{briefing_date}")
-async def get_briefing(user_id: str = Query(...), briefing_date: str = Query(...)):
+async def get_briefing(briefing_date: str = Path(...), user_id: str = Query(...)):
     """
     Get a specific briefing
     
-    Example: GET /api/briefing?user_id=user123&briefing_date=2026-05-29
+    Example: GET /api/briefing/2026-05-29?user_id=user123
     """
     try:
         briefing = await firestore_service.get_briefing(user_id, briefing_date)
