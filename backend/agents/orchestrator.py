@@ -8,6 +8,7 @@ from agents.inbox import inbox_module
 from agents.finance import finance_module
 from agents.schedule import schedule_module
 from agents.anomaly import anomaly_module
+from agents.news import news_module
 from services.firestore import firestore_service
 from services.notifications import notification_service
 from datetime import datetime
@@ -49,14 +50,16 @@ class OrchestratorAgent:
                 inbox_module.run(user_id),
                 finance_module.run(user_id),
                 schedule_module.run(user_id),
+                news_module.run(user_id),
                 return_exceptions=True
             )
             
             inbox_result = results[0] if not isinstance(results[0], Exception) else {"error": str(results[0])}
             finance_result = results[1] if not isinstance(results[1], Exception) else {"error": str(results[1])}
             schedule_result = results[2] if not isinstance(results[2], Exception) else {"error": str(results[2])}
+            news_result = results[3] if not isinstance(results[3], Exception) else {"error": str(results[3])}
             
-            print(f"[Orchestrator] Module results: Inbox={inbox_result.get('status', 'ok')}, Finance={finance_result.get('status', 'ok')}, Schedule={schedule_result.get('status', 'ok')}")
+            print(f"[Orchestrator] Module results: Inbox={inbox_result.get('status', 'ok')}, Finance={finance_result.get('status', 'ok')}, Schedule={schedule_result.get('status', 'ok')}, News={len(news_result.get('articles', []))} articles")
             
             # Aggregate module results
             aggregated_results = {
@@ -68,12 +71,13 @@ class OrchestratorAgent:
             # Run anomaly detection on aggregated results
             anomaly_result = await anomaly_module.run(aggregated_results)
             
-            # Build final briefing
+            # Build final briefing with all 5 modules
             briefing = {
                 "modules": {
                     "inbox": self._clean_module_result(inbox_result),
                     "finance": self._clean_module_result(finance_result),
                     "schedule": self._clean_module_result(schedule_result),
+                    "news": self._clean_module_result(news_result),
                     "anomalies": anomaly_result
                 },
                 "status": "ready",
@@ -96,6 +100,7 @@ class OrchestratorAgent:
                         "inbox": "completed" if not isinstance(results[0], Exception) else "failed",
                         "finance": "completed" if not isinstance(results[1], Exception) else "failed",
                         "schedule": "completed" if not isinstance(results[2], Exception) else "failed",
+                        "news": "completed" if not isinstance(results[3], Exception) else "failed",
                         "anomalies": "completed"
                     }
                 }
