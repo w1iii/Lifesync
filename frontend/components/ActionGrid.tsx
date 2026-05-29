@@ -8,17 +8,8 @@ export default function ActionGrid({ briefing }: Props) {
   const anomalies = briefing?.modules?.anomaly?.anomalies ?? [];
   const bills = briefing?.modules?.finance?.billsDue ?? [];
   const draftReplies = briefing?.modules?.inbox?.draftReplies ?? [];
-  const unusualCharges = briefing?.modules?.finance?.unusualCharges ?? [];
 
   const actions = [
-    ...unusualCharges.map((c) => ({
-      id: c.id,
-      icon: "warning" as const,
-      iconBg: "bg-error-container text-on-error-container" as const,
-      title: c.title,
-      description: c.description,
-      actionLabel: c.suggestedAction,
-    })),
     ...anomalies.map((a) => ({
       id: a.id,
       icon: "notification_important" as const,
