@@ -46,9 +46,18 @@ export interface ScheduleModule extends BriefingModule {
   totalMeetingMinutes: number;
 }
 
+export interface NewsArticle {
+  title: string;
+  source: string;
+  url: string;
+  summary: string;
+  relevance_score?: number;
+  published_at?: string;
+}
+
 export interface NewsModule extends BriefingModule {
   totalArticles?: number;
-  articles?: Array<{ title: string; source: string; url: string; summary: string }>;
+  articles?: NewsArticle[];
   topics?: string[];
 }
 
