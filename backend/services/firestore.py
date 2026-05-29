@@ -186,4 +186,14 @@ class FirestoreService:
         })
 
 
+    async def create_user(self, uid: str, name: str, email: str):
+        if not self.is_ready:
+            return
+        self._db.collection("users").document(uid).set({
+            "uid": uid,
+            "name": name,
+            "email": email,
+            "createdAt": datetime.now(),
+        })
+
 firestore_service = FirestoreService()

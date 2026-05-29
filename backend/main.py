@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 load_dotenv()
 
 # Import routes
-from api.routes import briefing, actions, scheduler
+from api.routes import briefing, actions, scheduler, auth
 
 # Lifespan context manager
 @asynccontextmanager
@@ -62,6 +62,7 @@ async def root():
 app.include_router(briefing.router, prefix="/api/briefing", tags=["briefing"])
 app.include_router(actions.router, prefix="/api/actions", tags=["actions"])
 app.include_router(scheduler.router, prefix="/api/scheduler", tags=["scheduler"])
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 
 if __name__ == "__main__":
     import uvicorn
