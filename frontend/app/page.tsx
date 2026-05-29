@@ -11,6 +11,7 @@ import ActionGrid from "@/components/ActionGrid";
 import NewsFeed from "@/components/NewsFeed";
 import FAB from "@/components/FAB";
 import Footer from "@/components/Footer";
+import AuthLayout from "@/components/AuthLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Briefing, Preferences } from "@/types";
 import { fetchLatestBriefing, generateBriefing, getPreferences, runDiagnostics } from "@/lib/api";
@@ -145,31 +146,29 @@ export default function Dashboard() {
 
   return (
     <>
-      <AmbientOrbs />
-      <Header />
-      <Sidebar connectedServices={preferences?.connectedServices} />
-      <main className="pt-28 pb-20 pl-32 pr-margin-desktop min-h-screen flex flex-col items-center">
-        <SummaryBar briefing={briefing} />
+      <AuthLayout sidebarConnectedServices={preferences?.connectedServices}>
+        <div className="flex flex-col items-center">
+          <SummaryBar briefing={briefing} />
           {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="w-10 h-10 border-4 border-secondary border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : (
-          <>
-            <OrbitSection briefing={briefing} onDiagnostics={handleDiagnostics} />
-            {generating && (
-              <div className="flex items-center justify-center gap-3 py-6">
-                <div className="w-6 h-6 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
-                <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Generating briefing...</span>
-              </div>
-            )}
-          </>
-        )}
-        <ActionGrid briefing={briefing} />
-        <NewsFeed briefing={briefing} />
-      </main>
+            <div className="flex items-center justify-center py-20">
+              <div className="w-10 h-10 border-4 border-secondary border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <>
+              <OrbitSection briefing={briefing} onDiagnostics={handleDiagnostics} />
+              {generating && (
+                <div className="flex items-center justify-center gap-3 py-6">
+                  <div className="w-6 h-6 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
+                  <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Generating briefing...</span>
+                </div>
+              )}
+            </>
+          )}
+          <ActionGrid briefing={briefing} />
+          <NewsFeed briefing={briefing} />
+        </div>
+      </AuthLayout>
       <FAB onClick={handleGenerate} />
-      <Footer />
     </>
   );
 }
