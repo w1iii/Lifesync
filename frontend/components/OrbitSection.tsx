@@ -2,18 +2,20 @@ import type { Briefing } from "@/types";
 
 interface Props {
   briefing?: Briefing | null;
+  onDiagnostics?: () => void;
 }
 
-export default function OrbitSection({ briefing }: Props) {
-  const inboxCount = briefing?.modules?.inbox?.totalEmails ?? 12;
-  const financeStatus = briefing?.modules?.finance?.totalSpent != null ? `$${briefing.modules.finance.totalSpent}` : "Stable";
+export default function OrbitSection({ briefing, onDiagnostics }: Props) {
+  const inboxCount = briefing?.modules?.inbox?.totalEmails ?? 0;
+  const financeStatus = briefing?.modules?.finance?.totalSpent != null ? `$${briefing.modules.finance.totalSpent}` : "—";
   const nextMeeting = briefing?.modules?.schedule?.todaysMeetings?.[0];
   const totalAnomalies = briefing?.modules?.anomaly?.totalAnomalies ?? 0;
   const allClear = totalAnomalies === 0;
-  const meetingTitle = nextMeeting?.title ?? "Deep Focus Session";
+  const meetingTitle = nextMeeting?.title ?? "No meetings";
   const meetingTime = nextMeeting?.start
     ? new Date(nextMeeting.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    : "09:00 AM";
+    : "";
+  const hasData = briefing != null;
 
   return (
     <div className="relative w-full flex justify-center items-center py-12">
@@ -45,10 +47,10 @@ export default function OrbitSection({ briefing }: Props) {
               Morning Cycle
             </span>
             <h1 className="font-display-lg text-display-lg text-primary mb-2">
-              {allClear ? "All Clear" : `${totalAnomalies} Issue${totalAnomalies > 1 ? "s" : ""}`}
+              {hasData ? (allClear ? "All Clear" : `${totalAnomalies} Issue${totalAnomalies > 1 ? "s" : ""}`) : "Press +"}
             </h1>
             <p className="font-body-md text-body-md text-on-tertiary-container italic">
-              {allClear ? "System Optimized" : "Attention Needed"}
+              {hasData ? (allClear ? "System Optimized" : "Attention Needed") : "Start your day"}
             </p>
           </div>
           <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 100 100">
@@ -62,9 +64,14 @@ export default function OrbitSection({ briefing }: Props) {
               strokeWidth="2"
             />
           </svg>
-          <div className="mt-8 bg-primary text-on-primary px-6 py-2 rounded-full font-label-sm text-label-sm uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity duration-500 cursor-pointer">
-            Run Diagnostics
-          </div>
+          {hasData && (
+            <div
+              className="mt-8 bg-primary text-on-primary px-6 py-2 rounded-full font-label-sm text-label-sm uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity duration-500 cursor-pointer"
+              onClick={onDiagnostics}
+            >
+              Run Diagnostics
+            </div>
+          )}
         </div>
       </div>
 
@@ -81,7 +88,7 @@ export default function OrbitSection({ briefing }: Props) {
         <div className="glass-card w-44 h-44 rounded-full flex flex-col items-center justify-center p-4 text-center hover:scale-105 transition-transform cursor-pointer">
           <span className="material-symbols-outlined text-secondary mb-2" style={{ fontSize: "32px" }}>ecg_heart</span>
           <span className="font-label-sm text-label-sm text-on-surface-variant block uppercase">Wellness</span>
-          <span className="font-headline-lg text-headline-lg text-primary">94%</span>
+          <span className="font-headline-lg text-headline-lg text-primary">—</span>
         </div>
       </div>
     </div>

@@ -20,6 +20,7 @@ export default function Dashboard() {
   const [briefing, setBriefing] = useState<Briefing | null>(null);
   const [preferences, setPreferences] = useState<Preferences | null>(null);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -83,14 +84,14 @@ export default function Dashboard() {
 
   const handleGenerate = async () => {
     if (!user) return;
-    setLoading(true);
+    setGenerating(true);
     try {
       const data = await generateBriefing(user.uid);
       setBriefing(data);
     } catch {
       setBriefing(null);
     }
-    setLoading(false);
+    setGenerating(false);
   };
 
   if (authLoading || !user) {
@@ -108,14 +109,22 @@ export default function Dashboard() {
       <Sidebar connectedServices={preferences?.connectedServices} />
       <main className="pt-28 pb-20 pl-32 pr-margin-desktop min-h-screen flex flex-col items-center">
         <SummaryBar briefing={briefing} />
-        {loading ? (
+          {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="w-10 h-10 border-4 border-secondary border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
-          <OrbitSection briefing={briefing} />
+          <>
+            <OrbitSection briefing={briefing} onDiagnostics={handleGenerate} />
+            {generating && (
+              <div className="flex items-center justify-center gap-3 py-6">
+                <div className="w-6 h-6 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
+                <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Generating briefing...</span>
+              </div>
+            )}
+          </>
         )}
-        <ActionGrid />
+        <ActionGrid briefing={briefing} />
       </main>
       <FAB onClick={handleGenerate} />
       <Footer />
