@@ -11,13 +11,14 @@ import ActionGrid from "@/components/ActionGrid";
 import FAB from "@/components/FAB";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
-import type { Briefing } from "@/types";
-import { fetchLatestBriefing, generateBriefing } from "@/lib/api";
+import type { Briefing, Preferences } from "@/types";
+import { fetchLatestBriefing, generateBriefing, getPreferences } from "@/lib/api";
 
 export default function Dashboard() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [briefing, setBriefing] = useState<Briefing | null>(null);
+  const [preferences, setPreferences] = useState<Preferences | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,8 +29,14 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!user) return;
-    fetchLatestBriefing(user.uid)
-      .then(setBriefing)
+    Promise.all([
+      fetchLatestBriefing(user.uid),
+      getPreferences(user.uid).catch(() => null),
+    ])
+      .then(([briefingData, prefsData]) => {
+        setBriefing(briefingData);
+        setPreferences(prefsData);
+      })
       .catch(() => setBriefing(null))
       .finally(() => setLoading(false));
   }, [user]);
@@ -98,7 +105,7 @@ export default function Dashboard() {
     <>
       <AmbientOrbs />
       <Header />
-      <Sidebar />
+      <Sidebar connectedServices={preferences?.connectedServices} />
       <main className="pt-28 pb-20 pl-32 pr-margin-desktop min-h-screen flex flex-col items-center">
         <SummaryBar briefing={briefing} />
         {loading ? (

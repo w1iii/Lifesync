@@ -1,6 +1,22 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 export default function Header() {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch {
+      // Firebase not configured — still navigate away
+    }
+    router.push("/login");
+  };
+
   return (
     <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-desktop py-4 bg-surface/40 backdrop-blur-xl border-b border-white/20 shadow-sm">
       <div className="font-headline-lg text-headline-lg font-light tracking-tighter text-primary">
@@ -27,6 +43,12 @@ export default function Header() {
         <button className="p-2 hover:bg-surface-bright/50 transition-all duration-300 rounded-full relative">
           <span className="material-symbols-outlined text-on-surface-variant">notifications</span>
           <span className="absolute top-1 right-1 w-2 h-2 bg-error rounded-full" />
+        </button>
+        <button
+          onClick={handleLogout}
+          className="font-label-sm text-label-sm text-on-surface-variant hover:text-error transition-colors uppercase tracking-widest"
+        >
+          Logout
         </button>
         <Image
           alt="User Profile Avatar"

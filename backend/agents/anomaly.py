@@ -57,8 +57,10 @@ class AnomalyModule:
                     "suggestedAction": "Consider blocking focus time or rescheduling lower-priority meetings"
                 })
             
-            # Check for overdue tasks or emails (simple rule-based)
+            # ======================== INBOX ANOMALIES ========================
             inbox = orchestrator_results.get("inbox", {})
+            
+            # High email volume
             if inbox.get("needsAttention", 0) > 5:
                 anomalies.append({
                     "id": "anomaly_inbox_overload",
@@ -68,6 +70,65 @@ class AnomalyModule:
                     "severity": "medium",
                     "suggestedAction": "Block 15 minutes to clear urgent emails"
                 })
+            
+            # Overdue follow-up: urgent emails that haven't been handled yet
+            needs = inbox.get("needsAttention", 0)
+            if 0 < needs <= 5:
+                anomalies.append({
+                    "id": "anomaly_overdue_followup",
+                    "type": "overdue_followup",
+                    "title": "Urgent emails need follow-up",
+                    "description": f"{needs} email(s) require your response",
+                    "severity": "medium",
+                    "suggestedAction": "Respond to flagged emails first thing"
+                })
+            
+            # No inbox activity: zero emails in the last 24h (possible issue or day off)
+            if inbox.get("totalEmails", 0) == 0:
+                anomalies.append({
+                    "id": "anomaly_no_inbox_activity",
+                    "type": "no_inbox_activity",
+                    "title": "No new emails detected",
+                    "description": "Zero emails in the last 24 hours — unusual pattern",
+                    "severity": "low",
+                    "suggestedAction": "Check email connection or enjoy the quiet day"
+                })
+            
+            # ======================== SCHEDULE ANOMALIES ========================
+            # Empty calendar: nothing scheduled today
+            if schedule.get("totalMeetings", 0) == 0:
+                anomalies.append({
+                    "id": "anomaly_empty_calendar",
+                    "type": "empty_calendar",
+                    "title": "Nothing on your calendar today",
+                    "description": "No meetings or events scheduled — you may have a free day",
+                    "severity": "low",
+                    "suggestedAction": "Block focus time or plan your day proactively"
+                })
+            
+            # ======================== FINANCE ANOMALIES ========================
+            # Budget overspend / near-limit warnings
+            budget = finance.get("budget", {})
+            for category, cat_data in budget.items():
+                pct = cat_data.get("percentage", 0)
+                if pct >= 100:
+                    anomalies.append({
+                        "id": f"anomaly_budget_exceeded_{category}",
+                        "type": "budget_exceeded",
+                        "title": f"{category.capitalize()} budget exceeded",
+                        "description": f"Spent ${cat_data['spent']:.0f} of ${cat_data['limit']:.0f} limit ({pct:.0f}%)",
+                        "severity": "high",
+                        "suggestedAction": f"Review {category} spending and adjust budget"
+                    })
+                elif pct >= 80:
+                    anomalies.append({
+                        "id": f"anomaly_budget_near_limit_{category}",
+                        "type": "budget_near_limit",
+                        "title": f"{category.capitalize()} near budget limit",
+                        "description": f"Spent ${cat_data['spent']:.0f} of ${cat_data['limit']:.0f} limit ({pct:.0f}%)",
+                        "severity": "medium",
+                        "suggestedAction": f"Reduce {category} spending to stay within budget"
+                    })
             
             # Sort by severity
             severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}

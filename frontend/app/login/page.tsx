@@ -1,23 +1,32 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { onAuthStateChanged, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import LandingNav from "@/components/LandingNav";
-import { useAuth } from "@/contexts/AuthContext";
 
 export default function Login() {
   const router = useRouter();
-  const { signIn, signInWithGoogle, user } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
 
+  const signIn = (e: string, p: string) => signInWithEmailAndPassword(auth, e, p);
+  const signInWithGoogle = () => {
+    const provider = new GoogleAuthProvider();
+    return signInWithPopup(auth, provider);
+  };
+
   useEffect(() => {
-    if (user) router.push("/");
-  }, [user, router]);
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) router.replace("/");
+    });
+    return () => unsub();
+  }, [router]);
 
   useEffect(() => {
     const blobs = document.querySelectorAll<HTMLElement>(".organic-blob");

@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { onAuthStateChanged, createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import LandingNav from "@/components/LandingNav";
-import { useAuth } from "@/contexts/AuthContext";
 
 export default function Signup() {
   const router = useRouter();
-  const { signUp, signInWithGoogle, user } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,9 +18,21 @@ export default function Signup() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
 
+  const signUp = async (n: string, e: string, p: string) => {
+    const cred = await createUserWithEmailAndPassword(auth, e, p);
+    await updateProfile(cred.user, { displayName: n });
+  };
+  const signInWithGoogle = () => {
+    const provider = new GoogleAuthProvider();
+    return signInWithPopup(auth, provider);
+  };
+
   useEffect(() => {
-    if (user) router.push("/");
-  }, [user, router]);
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) router.replace("/onboarding");
+    });
+    return () => unsub();
+  }, [router]);
 
   useEffect(() => {
     const blobs = document.querySelectorAll<HTMLElement>(".organic-blob");
@@ -50,7 +62,7 @@ export default function Signup() {
     setSubmitting(true);
     try {
       await signUp(name, email, password);
-      router.push("/");
+      router.push("/onboarding");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -61,7 +73,7 @@ export default function Signup() {
   const handleGoogle = async () => {
     try {
       await signInWithGoogle();
-      router.push("/");
+      router.push("/onboarding");
     } catch {
       setError("Google sign-up failed");
     }

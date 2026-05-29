@@ -85,3 +85,11 @@ export interface UserPreferences {
   interests?: string[];
   notifications?: boolean;
 }
+
+export interface Preferences {
+  userId: string;
+  briefingTime: { hour: number; minute: number; ampm: string };
+  briefingIntensity: number;
+  modules: Array<{ id: string; enabled: boolean; priority?: boolean }>;
+  connectedServices: string[];
+}
