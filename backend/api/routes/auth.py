@@ -58,7 +58,11 @@ async def create_profile(req: CreateProfileRequest, authorization: str = Header(
 
 def _make_flow(redirect_uri: str, scopes: list[str]) -> Flow:
     config = {**CLIENT_CONFIG, "web": {**CLIENT_CONFIG["web"], "redirect_uris": [redirect_uri]}}
-    return Flow.from_client_config(config, scopes=scopes, redirect_uri=redirect_uri)
+    flow = Flow.from_client_config(
+        config, scopes=scopes, redirect_uri=redirect_uri,
+        autogenerate_code_verifier=False
+    )
+    return flow
 
 @router.get("/gmail-connect")
 async def gmail_connect(user_id: str = Query(...)):
@@ -70,7 +74,7 @@ async def gmail_connect(user_id: str = Query(...)):
         f.write(user_id)
     auth_url, _ = flow.authorization_url(
         access_type="offline",
-        include_granted_scopes="true",
+        include_granted_scopes="false",
         state=state,
         prompt="consent",
     )
@@ -105,7 +109,7 @@ async def calendar_connect(user_id: str = Query(...)):
         f.write(user_id)
     auth_url, _ = flow.authorization_url(
         access_type="offline",
-        include_granted_scopes="true",
+        include_granted_scopes="false",
         state=state,
         prompt="consent",
     )

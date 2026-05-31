@@ -7,7 +7,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from typing import Dict, List, Any, Optional
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 class FirestoreService:
     _instance = None
@@ -44,12 +44,12 @@ class FirestoreService:
     
     async def create_briefing(self, user_id: str, briefing_data: Dict[str, Any]) -> str:
         if not self.is_ready:
-            return f"mock_briefing_{datetime.now().strftime('%Y-%m-%d')}"
-        briefing_id = f"briefing_{datetime.now().strftime('%Y-%m-%d')}"
+            return f"mock_briefing_{datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
+        briefing_id = f"briefing_{datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
         doc_ref = self._db.collection("users").document(user_id).collection("briefings").document(briefing_id)
         doc_ref.set({
             "id": briefing_id,
-            "createdAt": datetime.now(),
+            "createdAt": datetime.now(timezone.utc),
             "status": "generating",
             "modules": briefing_data.get("modules", {}),
             "syncMetadata": briefing_data.get("syncMetadata", {}),
@@ -89,7 +89,7 @@ class FirestoreService:
         if not doc.exists:
             return None
         data = doc.to_dict()
-        if "expiresAt" in data and data["expiresAt"] < datetime.now():
+        if "expiresAt" in data and data["expiresAt"] < datetime.now(timezone.utc):
             await self.delete_cache(cache_id)
             return None
         return data
@@ -97,12 +97,12 @@ class FirestoreService:
     async def set_cache(self, cache_id: str, data: Dict[str, Any], ttl_minutes: int = 45):
         if not self.is_ready:
             return
-        expires_at = datetime.now() + timedelta(minutes=ttl_minutes)
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=ttl_minutes)
         self._db.collection("dataCache").document(cache_id).set({
             "id": cache_id,
             "data": data,
             "expiresAt": expires_at,
-            "lastUpdated": datetime.now(),
+            "lastUpdated": datetime.now(timezone.utc),
         })
     
     async def delete_cache(self, cache_id: str):
@@ -123,15 +123,15 @@ class FirestoreService:
     
     async def create_action(self, user_id: str, briefing_id: str, action_data: Dict[str, Any]) -> str:
         if not self.is_ready:
-            return f"mock_action_{datetime.now().timestamp()}"
-        action_id = f"action_{datetime.now().timestamp()}"
+            return f"mock_action_{datetime.now(timezone.utc).timestamp()}"
+        action_id = f"action_{datetime.now(timezone.utc).timestamp()}"
         self._db.collection("users").document(user_id).collection("userActions").document(action_id).set({
             "id": action_id,
             "briefingId": briefing_id,
             "type": action_data.get("type"),
             "moduleId": action_data.get("moduleId"),
             "itemId": action_data.get("itemId"),
-            "actionedAt": datetime.now(),
+            "actionedAt": datetime.now(timezone.utc),
             "status": "pending",
         })
         return action_id
@@ -146,15 +146,15 @@ class FirestoreService:
     
     async def create_notification(self, user_id: str, notification_data: Dict[str, Any]) -> str:
         if not self.is_ready:
-            return f"mock_notif_{datetime.now().timestamp()}"
-        notif_id = f"notif_{datetime.now().timestamp()}"
+            return f"mock_notif_{datetime.now(timezone.utc).timestamp()}"
+        notif_id = f"notif_{datetime.now(timezone.utc).timestamp()}"
         self._db.collection("users").document(user_id).collection("notifications").document(notif_id).set({
             "id": notif_id,
             "type": notification_data.get("type"),
             "title": notification_data.get("title"),
             "message": notification_data.get("message"),
             "severity": notification_data.get("severity", "info"),
-            "createdAt": datetime.now(),
+            "createdAt": datetime.now(timezone.utc),
             "read": False,
         })
         return notif_id
@@ -173,11 +173,11 @@ class FirestoreService:
     async def log_agent_execution(self, user_id: str, execution_data: Dict[str, Any]):
         if not self.is_ready:
             return
-        exec_id = f"exec_{datetime.now().strftime('%Y-%m-%d')}"
+        exec_id = f"exec_{datetime.now(timezone.utc).strftime('%Y-%m-%d')}"
         self._db.collection("executionLog").document(exec_id).set({
             "id": exec_id,
             "userId": user_id,
-            "timestamp": datetime.now(),
+            "timestamp": datetime.now(timezone.utc),
             "agentRunId": execution_data.get("agentRunId"),
             "status": execution_data.get("status"),
             "duration": execution_data.get("duration"),
@@ -193,7 +193,7 @@ class FirestoreService:
             "uid": uid,
             "name": name,
             "email": email,
-            "createdAt": datetime.now(),
+            "createdAt": datetime.now(timezone.utc),
         })
 
 firestore_service = FirestoreService()

@@ -62,7 +62,8 @@ class CalendarMCPClient:
                         "token_uri": "https://oauth2.googleapis.com/token",
                     }
                 },
-                SCOPES
+                SCOPES,
+                autogenerate_code_verifier=False
             )
             
             print(f"\n  =============================================")
@@ -71,6 +72,7 @@ class CalendarMCPClient:
             creds = flow.run_local_server(
                 port=8081,
                 open_browser=True,
+                enable_pkce=False,
                 success_message="LifeSync Calendar auth successful! You can close this window."
             )
             
@@ -172,7 +174,7 @@ class CalendarMCPClient:
                     "description": event.get("description", "")[:200],
                 })
             
-            return result if result else self._mock_events()
+            return result
         
         except HttpError as e:
             if e.resp.status == 401:
@@ -186,6 +188,10 @@ class CalendarMCPClient:
         try:
             s = datetime.fromisoformat(start.replace("Z", "+00:00"))
             e = datetime.fromisoformat(end.replace("Z", "+00:00"))
+            if s.tzinfo is None:
+                s = s.replace(tzinfo=__import__('datetime').timezone.utc)
+            if e.tzinfo is None:
+                e = e.replace(tzinfo=__import__('datetime').timezone.utc)
             return int((e - s).total_seconds() / 60)
         except:
             return 60

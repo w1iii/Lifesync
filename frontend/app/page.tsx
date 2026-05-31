@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import AmbientOrbs from "@/components/AmbientOrbs";
 import Header from "@/components/Header";
-import Sidebar from "@/components/Sidebar";
 import SummaryBar from "@/components/SummaryBar";
 import OrbitSection from "@/components/OrbitSection";
 import ActionGrid from "@/components/ActionGrid";
@@ -146,7 +145,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <AuthLayout sidebarConnectedServices={preferences?.connectedServices}>
+      <AuthLayout>
         <div className="flex flex-col items-center">
           <SummaryBar briefing={briefing} />
           {loading ? (

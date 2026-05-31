@@ -8,10 +8,11 @@ import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 const NAV = [
-  { href: "/", label: "Dashboard" },
-  { href: "/calendar", label: "Calendar" },
-  { href: "/health", label: "Health" },
-  { href: "/insights", label: "Insights" },
+  { href: "/", icon: "grid_view", label: "Dashboard" },
+  { href: "/inbox", icon: "mail", label: "Inbox" },
+  { href: "/calendar", icon: "calendar_today", label: "Calendar" },
+  { href: "/health", icon: "favorite", label: "Health" },
+  { href: "/insights", icon: "insights", label: "Insights" },
 ] as const;
 
 export default function Header() {
@@ -47,18 +48,23 @@ export default function Header() {
       <div className="font-headline-lg text-headline-lg font-light tracking-tighter text-primary">
         LifeSync AI
       </div>
-      <nav className="hidden md:flex items-center gap-8">
+      <nav className="hidden md:flex items-center gap-3">
         {NAV.map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className={`relative px-4 py-1.5 rounded-full transition-all duration-300 text-sm ${
+            className={`relative p-3 rounded-full transition-all duration-300 ${
               isActive(item.href)
-                ? "bg-secondary/15 text-secondary font-semibold"
-                : "text-on-surface-variant/60 hover:text-on-surface-variant hover:bg-white/10"
+                ? "bg-secondary/15 text-secondary shadow-lg shadow-secondary/10 scale-110"
+                : "text-on-surface-variant/50 hover:text-on-surface-variant hover:bg-white/10 hover:scale-105"
             }`}
           >
-            {item.label}
+            <span
+              className="material-symbols-outlined transition-all duration-300"
+              style={isActive(item.href) ? { fontVariationSettings: "'FILL' 1" } : undefined}
+            >
+              {item.icon}
+            </span>
           </Link>
         ))}
       </nav>

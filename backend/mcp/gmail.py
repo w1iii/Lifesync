@@ -72,7 +72,8 @@ class GmailMCPClient:
                         "token_uri": "https://oauth2.googleapis.com/token",
                     }
                 },
-                SCOPES
+                SCOPES,
+                autogenerate_code_verifier=False
             )
             
             print(f"\n  =============================================")
@@ -86,6 +87,7 @@ class GmailMCPClient:
             creds = flow.run_local_server(
                 port=8080,
                 open_browser=True,
+                enable_pkce=False,
                 success_message="LifeSync Gmail auth successful! You can close this window."
             )
             

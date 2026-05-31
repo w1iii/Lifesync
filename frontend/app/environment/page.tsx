@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AmbientOrbs from "@/components/AmbientOrbs";
 import Header from "@/components/Header";
-import Sidebar from "@/components/Sidebar";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Briefing } from "@/types";
@@ -46,8 +45,7 @@ export default function EnvironmentPage() {
     <>
       <AmbientOrbs />
       <Header />
-      <Sidebar />
-      <main className="pt-28 pb-20 pl-32 pr-margin-desktop min-h-screen">
+      <main className="pt-28 pb-20 px-margin-desktop min-h-screen">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-center gap-4 mb-8">
             <span className="material-symbols-outlined text-secondary text-3xl">energy_savings_leaf</span>

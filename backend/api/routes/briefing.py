@@ -11,23 +11,6 @@ from agents.anomaly import anomaly_module
 
 router = APIRouter()
 
-@router.get("/{briefing_date}")
-async def get_briefing(briefing_date: str = Path(...), user_id: str = Query(...)):
-    """
-    Get a specific briefing
-    
-    Example: GET /api/briefing/2026-05-29?user_id=user123
-    """
-    try:
-        briefing = await firestore_service.get_briefing(user_id, briefing_date)
-        
-        if not briefing:
-            raise HTTPException(status_code=404, detail="Briefing not found")
-        
-        return briefing
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 @router.get("/latest")
 async def get_latest_briefing(user_id: str = Query(...)):
     """
@@ -42,6 +25,27 @@ async def get_latest_briefing(user_id: str = Query(...)):
             raise HTTPException(status_code=404, detail="No briefings found")
         
         return briefing
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{briefing_date}")
+async def get_briefing(briefing_date: str = Path(...), user_id: str = Query(...)):
+    """
+    Get a specific briefing
+    
+    Example: GET /api/briefing/2026-05-29?user_id=user123
+    """
+    try:
+        briefing = await firestore_service.get_briefing(user_id, briefing_date)
+        
+        if not briefing:
+            raise HTTPException(status_code=404, detail="Briefing not found")
+        
+        return briefing
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
