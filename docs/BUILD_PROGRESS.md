@@ -2,276 +2,144 @@
 
 ## Summary
 
-**Week 1 Status:** 80% Complete ✅  
-**Date:** May 29, 2026  
+**Overall Status:** ~90% Complete ✅  
+**Last Updated:** June 1, 2026  
 **Deadline:** June 8, 2026
 
-We've built the **complete backend infrastructure** for LifeSync in one session. All core components are implemented and ready for integration testing.
+Backend is fully implemented. Frontend is largely built (11 pages, 11 components). Remaining work: tests, production-hardening OAuth, AI drafting, and deployment.
 
 ---
 
 ## What We've Built
 
 ### ✅ Project Setup
-- [x] Created new Python/FastAPI backend (not Express)
-- [x] Initialized git repository with .gitignore
-- [x] Set up project structure with modular organization
-- [x] Created environment configuration (.env.example)
-- [x] Generated comprehensive documentation
+- [x] Python/FastAPI backend with modular organization
+- [x] Git repository with .gitignore
+- [x] Environment configuration (.env.example)
+- [x] Documentation (DESIGN.md, BACKEND_SETUP.md, BUILD_PROGRESS.md)
 
-### ✅ Backend API (Cloud Run ready)
-**Location:** `/Users/wii/Projects/lifesync/backend/main.py`
+### ✅ Backend API (6 route modules)
+**Location:** `backend/main.py`
 
-- FastAPI application with CORS middleware
-- Health check endpoint (`/health`)
-- RESTful API design ready for Cloud Run deployment
-- Automatic API documentation (`/docs`, `/redoc`)
+- FastAPI with CORS middleware
+- Health check + auto docs (`/docs`, `/redoc`)
+- 6 routers registered:
 
-**Endpoints Implemented:**
-1. **Briefing Routes** (`/api/briefing/*`)
-   - `GET /api/briefing/{briefing_date}` - Get specific briefing
-   - `GET /api/briefing/latest` - Get most recent
-   - `GET /api/briefings` - List with pagination
+| Router | Prefix | Endpoints |
+|--------|--------|-----------|
+| Briefing | `/api/briefing` | GET latest, GET by date, POST generate, POST diagnostics, GET list |
+| Actions | `/api/actions` | POST approve, POST reject |
+| Scheduler | `/api/scheduler` | POST trigger-nightly-agent, GET test-agent |
+| Auth | `/api/auth` | POST create-profile, GET gmail-connect, GET gmail/callback, GET calendar-connect, GET calendar/callback |
+| Preferences | `/api/preferences` | POST save, GET by user_id |
+| Inbox | `/api/inbox` | GET emails |
 
-2. **Actions Routes** (`/api/actions/*`)
-   - `POST /api/actions/approve` - Execute approved action
-   - `POST /api/actions/reject` - Reject action
+### ✅ Database Layer (Firestore)
+**Location:** `backend/services/firestore.py`
 
-3. **Scheduler Routes** (`/api/scheduler/*`)
-   - `POST /api/scheduler/trigger-nightly-agent` - Manual trigger
-   - `GET /api/scheduler/test-agent` - Development test endpoint
-
-### ✅ Database Layer (Firestore ready)
-**Location:** `/Users/wii/Projects/lifesync/backend/services/firestore.py`
-
-Full Firestore abstraction with:
-- Briefing CRUD operations
-- Caching with TTL support
-- User preferences management
-- Action tracking
-- Async notification system
-- Execution logging
-
-Collections designed:
-```
-users/{userId}/
-  ├── briefings/ - Daily briefing snapshots
-  ├── userPreferences/ - User settings
-  ├── userActions/ - Action history
-  └── notifications/ - Async alerts
-dataCache/ - Cached external data
-executionLog/ - Agent run history
-```
+- Singleton Firestore client with graceful mock fallback when unconfigured
+- Full CRUD: briefings, user preferences, actions, notifications, cache, execution logs
+- Collections: `users/{userId}/briefings`, `userPreferences`, `userActions`, `notifications`, `dataCache`, `executionLog`
 
 ### ✅ Caching Layer
-**Location:** `/Users/wii/Projects/lifesync/backend/services/cache.py`
+**Location:** `backend/services/cache.py`
 
-Smart caching system:
-- Get-or-fetch pattern with TTL
-- Automatic expiration checking
-- Invalidation support
-- 30-60 min default cache window
+- Get-or-fetch pattern with configurable TTL (default 45 min)
+- Auto-expiration checking, invalidation support
 
 ### ✅ Notification System
-**Location:** `/Users/wii/Projects/lifesync/backend/services/notifications.py`
+**Location:** `backend/services/notifications.py`
 
-Async notification types:
-- Action failures & successes
-- Briefing ready alerts
-- Agent errors
-- Data sync failures
-- User dismissal tracking
+- Async notification types: action failures/successes, briefing ready, agent errors, data sync errors
+- Enums for type + severity (low → critical)
 
-### ✅ MCP Integrations (Mock-ready)
-All MCPs implemented with mock data for testing:
+### ✅ MCP Integrations (4 total, 3 with real API code)
 
-**Fivetran MCP** (`/Users/wii/Projects/lifesync/backend/mcp/fivetran.py`)
-- Bank account fetching
-- Transaction history
-- Subscription tracking
-- Duplicate charge detection ready
-
-**Gmail MCP** (`/Users/wii/Projects/lifesync/backend/mcp/gmail.py`)
-- Email fetching (24-hour window)
-- Reply sending capability
-- Email marking operations
-- Mock email data for testing
-
-**Elastic MCP** (`/Users/wii/Projects/lifesync/backend/mcp/elastic.py`)
-- News article search
-- RSS feed integration
-- Article indexing
-- Mock news data for testing
+| MCP | File | Status | Real API |
+|-----|------|--------|----------|
+| Gmail | `backend/mcp/gmail.py` | ✅ Complete | Google API (real, falls back to mock) |
+| Calendar | `backend/mcp/calendar.py` | ✅ Complete | Google Calendar API (real, falls back to mock) |
+| Elastic/RSS | `backend/mcp/elastic.py` | ✅ Complete | RSS feeds (BBC, NYT, Bloomberg, etc.) |
+| Fivetran | `backend/mcp/fivetran.py` | ✅ Complete | Fivetran REST API client (returns mock) |
 
 ### ✅ Agent Orchestrator
-**Location:** `/Users/wii/Projects/lifesync/backend/agents/orchestrator.py`
+**Location:** `backend/agents/orchestrator.py`
 
-Main orchestrator that:
-- Runs all 4 modules in parallel
-- Aggregates results
-- Triggers anomaly detection
-- Writes briefing to Firestore
-- Logs execution
-- Sends notifications
-- Error handling & recovery
+- Runs **5 modules** in parallel via `asyncio.gather` (4 modules + anomaly post-aggregation)
+- Creates briefing doc → runs modules → aggregates → anomaly detection → updates Firestore → logs execution → sends notification
+- Error handling & recovery per module
 
-**Execution Flow:**
-```
-orchestrator.run_nightly_agent(user_id)
-  ├─ Create briefing doc (status: generating)
-  ├─ Run 4 modules in parallel:
-  │  ├─ Inbox Module
-  │  ├─ Finance Module
-  │  ├─ Schedule Module
-  │  └─ (Anomaly runs after)
-  ├─ Run Anomaly Detection
-  ├─ Update briefing (status: ready)
-  ├─ Log execution
-  └─ Notify user
-```
+### ✅ Module Agents (All 5 Implemented)
 
-### ✅ Module Agents (All 4 Implemented)
+| Module | File | Function |
+|--------|------|----------|
+| Inbox | `agents/inbox.py` | Fetches/categorizes emails (urgent/fyi/archive), drafts replies, detects newsletters |
+| Finance | `agents/finance.py` | Budget vs. spend, duplicate charges, bills due next 7 days, portfolio tracking |
+| Schedule | `agents/schedule.py` | Calendar events, priority ranking, conflict detection, overload estimation |
+| News | `agents/news.py` | RSS articles filtered by user interests, relevance scoring |
+| Anomaly | `agents/anomaly.py` | Cross-module detection: duplicate charges, meeting conflicts, overload, inbox overload, budget overruns, no-email/empty-calendar edge cases |
 
-#### 1. **Inbox Module** (`/Users/wii/Projects/lifesync/backend/agents/inbox.py`)
-- Fetches recent emails (24-hour window)
-- Categorizes: urgent / fyi / archive
-- Rule-based categorization (keywords, sender detection)
-- Drafts replies for urgent emails
-- Suggests newsletters for unsubscribe
+### ✅ Frontend (Web — Next.js 16 App Router)
+**Location:** `frontend/`
 
-**Output:**
-```json
-{
-  "totalEmails": 47,
-  "needsAttention": 3,
-  "draftedReplies": [...],
-  "categorized": {"urgent": 3, "fyi": 12, "archive": 32}
-}
-```
+**11 Pages built:**
 
-#### 2. **Finance Module** (`/Users/wii/Projects/lifesync/backend/agents/finance.py`)
-- Fetches bank accounts, transactions, subscriptions
-- Calculates spending vs. budgets
-- Detects duplicate charges
-- Extracts bills due (next 7 days)
-- Calculates portfolio % change
+| Route | Purpose | Status |
+|-------|---------|--------|
+| `/` | Dashboard — dynamic briefing, orbit display, action grid, news feed | ✅ Done |
+| `/landing` | Marketing/landing page | ✅ Done |
+| `/login` | Firebase Auth email/password | ✅ Done |
+| `/signup` | Firebase Auth registration | ✅ Done |
+| `/onboarding` | Step-based service connection flow | ✅ Done |
+| `/inbox` | Full email listing by category, expand/collapse | ✅ Done |
+| `/calendar` | Calendar view | ✅ Done |
+| `/insights` | Analytics/insights | ✅ Done |
+| `/health` | Health/wellness | ✅ Done |
+| `/environment` | Environmental data | ✅ Done |
+| `/settings` | Preferences, integrations, account mgmt | ✅ Done |
 
-**Anomaly Detection:**
-- Duplicate charges (same merchant, same amount)
-- New subscriptions
-- Unusual amounts
+**11 Components:**
+- `ActionGrid` — renders anomaly/bill/draft actions with approve/dismiss
+- `AmbientOrbs` — decorative animated background
+- `AuthLayout` — authenticated layout wrapper
+- `FAB` — floating action button for manual briefing generation
+- `Footer` / `Header` — app chrome
+- `LandingNav` — unauthenticated landing nav
+- `NewsFeed` — news article cards from briefing data
+- `OrbitSection` — visual orbital dashboard display
+- `PageTransition` — Framer Motion page transitions
+- `SummaryBar` — 3-pill summary (urgent / bills / anomalies)
 
-**Output:**
-```json
-{
-  "budget": {"food": {"spent": 340, "limit": 500, "percentage": 68}},
-  "billsDue": [{"name": "Electricity", "amount": 45, "daysUntilDue": 2}],
-  "unusualCharges": [...]
-}
-```
+**State Coverage:**
+- Loading (spinner)
+- Empty (no briefing — "Press +" prompt)
+- Error (error banners, graceful catch)
+- Data populated (full briefing display)
+- Auth guard (redirects to `/landing` when unauthenticated)
+- localStorage hydration (instant load, then API fetch)
 
-#### 3. **Schedule Module** (`/Users/wii/Projects/lifesync/backend/agents/schedule.py`)
-- Fetches today's calendar events
-- Ranks by priority & deadline
-- Detects meeting conflicts
-- Suggests reschedules
-- Estimates if day is overloaded (>6 hours meetings)
-
-**Output:**
-```json
-{
-  "todaysMeetings": [...],
-  "topPriorities": [...],
-  "conflicts": [{...}],
-  "estimatedOverload": false
-}
-```
-
-#### 4. **Anomaly Detection Module** (`/Users/wii/Projects/lifesync/backend/agents/anomaly.py`)
-- Cross-module anomaly detection
-- Aggregates issues from all modules
-- Ranks by severity (critical > high > medium > low)
-- Provides suggested actions
-
-**Detects:**
-- Duplicate charges
-- Meeting conflicts
-- Overloaded days
-- High email volume
-- Overdue tasks
-
-**Output:**
-```json
-{
-  "anomalies": [
-    {
-      "id": "anomaly_1",
-      "type": "duplicate_charge",
-      "title": "Netflix charged twice",
-      "severity": "high",
-      "suggestedAction": "Contact Netflix support"
-    }
-  ],
-  "totalAnomalies": 2,
-  "criticalCount": 0,
-  "highCount": 1
-}
-```
+**API Layer:** `lib/api.ts` with typed functions for all backend endpoints, plus OAuth window popup
 
 ---
 
-## Testing the Backend
+## What Needs Work
 
-### Quick Start
-```bash
-cd /Users/wii/Projects/lifesync/backend
-source venv/bin/activate
-pip install -q fastapi uvicorn google-cloud-firestore
-python3 main.py
-```
+### 🔴 High Priority
+- [ ] **No automated tests** — 0 test files across backend or frontend
+- [ ] **`actions.py` approve uses hardcoded `to="test@example.com"`** — must resolve from `item_id`
+- [ ] **OAuth desktop flow** — `run_local_server` in `gmail.py`/`calendar.py` breaks in Cloud Run/headless
+- [ ] **Gemini draft reply is a stub** — `_draft_reply` returns template text, not AI-generated
 
-API will be available at: `http://localhost:8000`
+### 🟡 Medium Priority
+- [ ] `BUILD_PROGRESS.md` was stale (just updated)
+- [ ] `.env.example` missing `FIVETRAN_API_SECRET`, `CALENDAR_REDIRECT_URI`
+- [ ] No production Docker Compose / Cloud Run deploy config
+- [ ] Gemini API key in `.env.example` but unused
 
-### Test Endpoints
-1. **Health check:** `http://localhost:8000/health`
-2. **API docs:** `http://localhost:8000/docs`
-3. **Test agent:** `GET http://localhost:8000/api/scheduler/test-agent?user_id=test_user`
-
-### Expected Test Output
-When you hit the test-agent endpoint, you should see:
-```json
-{
-  "briefing_id": "briefing_2026-05-29",
-  "status": "completed",
-  "modules": {
-    "inbox": {...},
-    "finance": {...},
-    "schedule": {...},
-    "anomalies": {...}
-  },
-  "duration_seconds": 2.45
-}
-```
-
----
-
-## What's Ready for Week 2
-
-✅ **All backend logic is production-ready**
-- Complete API endpoints
-- All agents implemented
-- Mock data for testing
-- Firestore schema defined
-- Error handling in place
-
-⏳ **What needs to happen:**
-1. Deploy to Cloud Run (with real Firebase credentials)
-2. Set up Cloud Scheduler for midnight runs
-3. Configure real OAuth for Gmail/Fivetran
-4. Build React/Next.js web dashboard
-5. Build React Native mobile app
-6. Implement real-time Firestore listeners
-7. Connect real MCP servers
+### 🟢 Low Priority
+- [ ] Firestore mock mode may hide credential issues
+- [ ] Error messages could be more specific in some routes
+- [ ] No loading skeletons (only spinners)
 
 ---
 
@@ -279,111 +147,138 @@ When you hit the test-agent endpoint, you should see:
 
 ### Backend Core
 ```
-backend/main.py ..................... 65 lines    FastAPI app entry point
-backend/requirements.txt ............ 17 lines    All dependencies
-
-API Routes (96 lines total)
-├── api/routes/briefing.py .......... 35 lines    GET briefing endpoints
-├── api/routes/actions.py ........... 46 lines    POST approve/reject
-└── api/routes/scheduler.py ......... 33 lines    POST trigger agent
-
-Services (285 lines total)
-├── services/firestore.py ........... 160 lines   Firestore operations
-├── services/cache.py ............... 38 lines    Caching with TTL
-└── services/notifications.py ....... 65 lines    Async notifications
-
-MCP Integrations (205 lines total)
-├── mcp/fivetran.py ................. 65 lines    Bank data
-├── mcp/gmail.py .................... 75 lines    Email operations
-└── mcp/elastic.py .................. 65 lines    News search
-
-Agents (450 lines total)
-├── agents/orchestrator.py .......... 120 lines   Main coordinator
-├── agents/inbox.py ................. 95 lines    Email processing
-├── agents/finance.py ............... 110 lines   Financial analysis
-├── agents/schedule.py .............. 85 lines    Calendar processing
-└── agents/anomaly.py ............... 75 lines    Anomaly detection
-
-Documentation
-├── docs/BACKEND_SETUP.md ........... Setup guide with troubleshooting
-├── README.md ....................... 65 lines    Project overview
-└── .env.example .................... 21 lines    Configuration template
+backend/ .................................................. ~1,500 LOC
+├── main.py ............................................. 78 lines
+├── requirements.txt ..................................... 18 lines
+├── api/routes/
+│   ├── briefing.py ...................................... 93 lines
+│   ├── actions.py ....................................... 102 lines
+│   ├── scheduler.py ..................................... 44 lines
+│   ├── auth.py .......................................... 135 lines
+│   ├── preferences.py ................................... 51 lines
+│   └── inbox.py ......................................... 29 lines
+├── agents/
+│   ├── orchestrator.py .................................. 145 lines
+│   ├── inbox.py ......................................... 123 lines
+│   ├── finance.py ....................................... 133 lines
+│   ├── schedule.py ...................................... 79 lines
+│   ├── news.py .......................................... 45 lines
+│   └── anomaly.py ....................................... 153 lines
+├── mcp/
+│   ├── gmail.py ......................................... 291 lines
+│   ├── calendar.py ...................................... 208 lines
+│   ├── elastic.py ....................................... 190 lines
+│   └── fivetran.py ...................................... 135 lines
+└── services/
+    ├── firestore.py ..................................... 199 lines
+    ├── cache.py ......................................... 53 lines
+    └── notifications.py ................................. 113 lines
 ```
 
-**Total Backend Code:** ~1,100 lines of production-ready Python
+### Frontend
+```
+frontend/ ................................................. ~3,000+ LOC
+├── app/ ................................................. 11 pages
+│   ├── page.tsx (Dashboard) ............................. 173 lines
+│   ├── layout.tsx ....................................... 34 lines
+│   ├── landing/page.tsx
+│   ├── login/page.tsx
+│   ├── signup/page.tsx
+│   ├── onboarding/page.tsx .............................. 310 lines
+│   ├── inbox/page.tsx ................................... 330 lines
+│   ├── calendar/page.tsx
+│   ├── insights/page.tsx
+│   ├── health/page.tsx
+│   ├── environment/page.tsx
+│   └── settings/page.tsx ................................ 316 lines
+├── components/ .......................................... 11 components
+│   ├── ActionGrid.tsx ................................... 121 lines
+│   ├── SummaryBar.tsx ................................... 34 lines
+│   ├── OrbitSection.tsx ................................. 96 lines
+│   ├── NewsFeed.tsx ..................................... 48 lines
+│   └── ... (7 more)
+├── contexts/AuthContext.tsx ............................. 93 lines
+├── lib/
+│   ├── api.ts ........................................... 90 lines
+│   └── firebase.ts ...................................... 17 lines
+├── types/index.ts ....................................... 104 lines
+└── app/globals.css ...................................... 246 lines (Tailwind theme)
+```
+
+**Total:** ~4,500+ LOC across backend + frontend
 
 ---
 
-## Performance Metrics
+## Status Summary
 
-Estimated agent runtime with mock data:
-- Inbox module: ~100ms
-- Finance module: ~150ms  
-- Schedule module: ~80ms
-- Anomaly detection: ~50ms
-- **Total end-to-end: ~380ms**
-
-With real data from MCPs (1-2 second latency per service):
-- **Estimated total: 2-4 seconds per nightly run**
-
-Goal is <3 minutes, easily achievable ✅
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Backend API (6 routes) | ✅ Complete | All endpoints working |
+| Agents (5 modules) | ✅ Complete | Inbox, Finance, Schedule, News, Anomaly |
+| Orchestrator | ✅ Complete | Parallel `asyncio.gather` execution |
+| MCP Integrations (4) | ✅ Complete | Gmail/Calendar real APIs, RSS live, Fivetran client |
+| Firestore Service | ✅ Complete | Schema designed, CRUD with mock fallback |
+| Caching | ✅ Complete | TTL-based get-or-fetch |
+| Notifications | ✅ Complete | Async, typed severity levels |
+| Auth/OAuth | ✅ Complete | Firebase Auth + Gmail/Calendar OAuth flows |
+| Frontend Pages (11) | ✅ Complete | All routes functional |
+| Frontend Components | ✅ Complete | 11 components, dashboard fully wired |
+| Tests | ❌ None | Biggest gap |
+| Action Approval (real) | ❌ Stub | `/approve` hardcodes test email |
+| Headless OAuth | ❌ Desktop flow | `run_local_server` breaks in production |
+| Gemini Drafting | ❌ Stub | Template text, not AI-generated |
+| Cloud Deployment | ⏳ Partially | Dockerfile exists, no CI/CD |
+| React Native Mobile | ⏳ Not started | Web-only for now |
 
 ---
 
 ## Risk Mitigation
 
-✅ **Mock data ready** for demonstration
-- No real API credentials needed for demo
-- Can show full agent flow with test data
-- Realistic sample outputs
-
-✅ **Error handling** built-in
-- Try/except in all modules
-- Async notifications for failures
-- Execution logging for debugging
-
-✅ **Modular design** allows phased real integration
-- MCP integration is in separate files
-- Can swap mock → real services one at a time
-- No breaking changes needed
+✅ **Mock data fallback** — all MCPs return realistic mock data when real credentials aren't configured  
+✅ **Error handling** — try/except in all modules, async notifications for failures, execution logging  
+✅ **Modular design** — swap mock → real services one at a time, no breaking changes  
+✅ **Dev mode** — Firestore returns mock IDs silently when unconfigured  
+✅ **Offline resilience** — frontend caches briefing + preferences in localStorage  
 
 ---
 
-## Next Session Goals
+## Next Steps (Prioritized)
 
-### Day 1-2: Firebase & Auth
-- [ ] Deploy Firestore collections & security rules
-- [ ] Set up Firebase Auth
-- [ ] Configure Gmail OAuth
-- [ ] Test real data sync with Fivetran
+### 1. Immediately
+- [ ] **Write tests** — backend unit tests (pytest) + frontend component tests
+- [ ] **Fix `actions.py` hardcoded values** — resolve email details from `item_id`
+- [ ] **Replace OAuth desktop flow** — Cloud Run-compatible token exchange
+- [ ] **Wire Gemini** — replace stub draft reply with AI-generated text
 
-### Day 3: Frontend Web
-- [ ] Initialize React/Next.js app
-- [ ] Build briefing dashboard UI
-- [ ] Implement Firestore real-time listeners
-- [ ] Add approve/reject action buttons
+### 2. Production Deployment
+- [ ] Deploy Firestore collections + security rules
+- [ ] Configure Cloud Run with GitHub Actions CI/CD
+- [ ] Set up Cloud Scheduler for midnight agent runs
+- [ ] Test real Gmail/Calendar OAuth end-to-end
 
-### Day 4: Frontend Mobile
-- [ ] Initialize React Native app
-- [ ] Build mobile dashboard
-- [ ] Test on simulator
-- [ ] Polish UI
+### 3. Polish
+- [ ] Loading skeletons (shimmer) instead of spinners
+- [ ] Error toast/notification system on frontend
+- [ ] Responsive tablet layout pass
+- [ ] Update `.env.example` with all required vars
 
-### Day 5: Integration & Demo
-- [ ] End-to-end testing
-- [ ] Bug fixes & optimization
-- [ ] Record demo video
-- [ ] Final polish
+### 4. Future
+- [ ] React Native mobile app
+- [ ] Push notifications via FCM
+- [ ] Real-time Firestore listeners for live updates
 
 ---
 
-## Key Commands for Next Session
+## Key Commands
 
 **Run backend:**
 ```bash
-cd /Users/wii/Projects/lifesync/backend
-source venv/bin/activate
-python3 main.py
+cd backend && source venv/bin/activate && python3 main.py
+```
+
+**Run frontend:**
+```bash
+cd frontend && npm run dev
 ```
 
 **Test agent:**
@@ -395,29 +290,3 @@ curl "http://localhost:8000/api/scheduler/test-agent?user_id=demo_user"
 ```
 http://localhost:8000/docs
 ```
-
----
-
-## Status Summary
-
-| Component | Status | Notes |
-|-----------|--------|-------|
-| Backend API | ✅ Complete | All endpoints working |
-| Agents | ✅ Complete | All 4 modules implemented |
-| Orchestrator | ✅ Complete | Parallel execution ready |
-| MCP Integrations | ✅ Complete | Mock data, real stubs ready |
-| Firestore Service | ✅ Complete | Schema designed, CRUD ready |
-| Caching | ✅ Complete | TTL-based, working |
-| Notifications | ✅ Complete | Async system ready |
-| Error Handling | ✅ Complete | All layers covered |
-| Documentation | ✅ Complete | Setup guide included |
-| Frontend Web | ⏳ Pending | React/Next.js |
-| Frontend Mobile | ⏳ Pending | React Native |
-| Real OAuth | ⏳ Pending | Credentials needed |
-| Cloud Deployment | ⏳ Pending | Docker + Cloud Run |
-
----
-
-**We're ahead of schedule! 🚀**
-
-All backend logic is done in Week 1. Next week is frontend + polish + deployment. On track for June 8 demo!
