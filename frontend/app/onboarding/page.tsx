@@ -31,6 +31,15 @@ export default function Onboarding() {
   }, [step]);
 
   const [connected, setConnected] = useState<string[]>(["fivetran"]);
+  const [briefingHour, setBriefingHour] = useState(7);
+  const [briefingMinute, setBriefingMinute] = useState(30);
+  const [briefingAmPm, setBriefingAmPm] = useState<"AM" | "PM">("AM");
+  const [briefingIntensity, setBriefingIntensity] = useState(65);
+  const [modules, setModules] = useState([
+    { id: "circadian", enabled: true, priority: true },
+    { id: "eco", enabled: false, priority: false },
+    { id: "focus", enabled: true, priority: true },
+  ]);
 
   const handleConnect = async (service: string) => {
     if (connected.includes(service)) return;
@@ -49,13 +58,9 @@ export default function Onboarding() {
     try {
       await savePreferences({
         userId,
-        briefingTime: { hour: 7, minute: 30, ampm: "AM" },
-        briefingIntensity: 65,
-        modules: [
-          { id: "circadian", enabled: true, priority: true },
-          { id: "eco", enabled: false, priority: false },
-          { id: "focus", enabled: true, priority: true },
-        ],
+        briefingTime: { hour: briefingHour, minute: briefingMinute, ampm: briefingAmPm },
+        briefingIntensity,
+        modules,
         connectedServices: connected,
       });
     } catch {
@@ -191,21 +196,30 @@ export default function Onboarding() {
                   </p>
 
                   <div className="flex items-center justify-center gap-4 py-8 relative">
-                    <div className="flex flex-col items-center">
-                      <div className="text-outline opacity-30 text-4xl font-light">06</div>
-                      <div className="text-primary text-6xl font-light py-2">07</div>
-                      <div className="text-outline opacity-30 text-4xl font-light">08</div>
+                    <div
+                      className="flex flex-col items-center cursor-pointer select-none"
+                      onClick={() => setBriefingHour((h) => (h % 12) + 1)}
+                    >
+                      <div className="text-outline opacity-30 text-4xl font-light">{((briefingHour - 2 + 12) % 12) + 1}</div>
+                      <div className="text-primary text-6xl font-light py-2">{briefingHour}</div>
+                      <div className="text-outline opacity-30 text-4xl font-light">{(briefingHour % 12) + 1}</div>
                     </div>
                     <div className="text-primary text-4xl font-light mb-1">:</div>
-                    <div className="flex flex-col items-center">
-                      <div className="text-outline opacity-30 text-4xl font-light">15</div>
-                      <div className="text-primary text-6xl font-light py-2">30</div>
-                      <div className="text-outline opacity-30 text-4xl font-light">45</div>
+                    <div
+                      className="flex flex-col items-center cursor-pointer select-none"
+                      onClick={() => setBriefingMinute((m) => (m + 15) % 60)}
+                    >
+                      <div className="text-outline opacity-30 text-4xl font-light">{String((briefingMinute - 15 + 60) % 60).padStart(2, "0")}</div>
+                      <div className="text-primary text-6xl font-light py-2">{String(briefingMinute).padStart(2, "0")}</div>
+                      <div className="text-outline opacity-30 text-4xl font-light">{String((briefingMinute + 15) % 60).padStart(2, "0")}</div>
                     </div>
-                    <div className="flex flex-col items-center ml-2">
-                      <div className="text-outline opacity-30 text-xl font-bold">AM</div>
-                      <div className="text-secondary text-2xl font-bold py-2">AM</div>
-                      <div className="text-outline opacity-30 text-xl font-bold">PM</div>
+                    <div
+                      className="flex flex-col items-center ml-2 cursor-pointer select-none"
+                      onClick={() => setBriefingAmPm((a) => (a === "AM" ? "PM" : "AM"))}
+                    >
+                      <div className={`text-xl font-bold ${briefingAmPm === "AM" ? "text-secondary" : "text-outline opacity-30"}`}>AM</div>
+                      <div className={`text-2xl font-bold py-2 ${briefingAmPm === "AM" ? "text-secondary" : "text-outline opacity-30"}`}>{briefingAmPm}</div>
+                      <div className={`text-xl font-bold ${briefingAmPm === "PM" ? "text-secondary" : "text-outline opacity-30"}`}>PM</div>
                     </div>
                     <div className="absolute inset-x-0 h-20 border-y border-secondary/20 pointer-events-none" />
                   </div>
@@ -219,7 +233,8 @@ export default function Onboarding() {
                       type="range"
                       min="0"
                       max="100"
-                      defaultValue="65"
+                      value={briefingIntensity}
+                      onChange={(e) => setBriefingIntensity(Number(e.target.value))}
                     />
                     <div className="flex justify-between mt-2 font-label-sm text-[10px] text-outline uppercase tracking-widest">
                       <span>Gentle</span>
@@ -231,42 +246,55 @@ export default function Onboarding() {
 
               <div className="md:col-span-7 lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {[
-                  { icon: "wb_sunny", title: "Circadian Rhythm", desc: "Sync your lighting and activities with your natural biological clock for better sleep.", priority: true, enabled: true },
-                  { icon: "eco", title: "Eco-Harmony", desc: "Track your digital carbon footprint and receive daily tips for sustainable living.", priority: false, enabled: false },
-                  { icon: "psychology", title: "Deep Focus", desc: "Intelligent notification filtering based on your neural focus cycles and tasks.", priority: true, enabled: true },
-                ].map((mod) => (
-                  <div
-                    key={mod.title}
-                    className={`glass-card rounded-xl p-8 group hover:bg-white/60 transition-all duration-500 cursor-pointer ${mod.enabled ? "" : "opacity-60"}`}
-                  >
-                    <div className="flex justify-between items-start mb-6">
-                      <div className={`w-12 h-12 flex items-center justify-center rounded-full ${mod.enabled ? "bg-secondary-container text-secondary" : "bg-surface-container text-outline"}`}>
-                        <span className="material-symbols-outlined" style={{ fontVariationSettings: mod.enabled ? "'FILL' 1" : "'FILL' 0" }}>
-                          {mod.icon}
-                        </span>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          defaultChecked={mod.enabled}
-                          className="sr-only toggle-checkbox"
-                          type="checkbox"
-                        />
-                        <div className="w-11 h-6 bg-surface-container-highest rounded-full transition-colors toggle-label">
-                          <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform toggle-dot" />
+                  { icon: "wb_sunny", title: "Circadian Rhythm", desc: "Sync your lighting and activities with your natural biological clock for better sleep.", id: "circadian" },
+                  { icon: "eco", title: "Eco-Harmony", desc: "Track your digital carbon footprint and receive daily tips for sustainable living.", id: "eco" },
+                  { icon: "psychology", title: "Deep Focus", desc: "Intelligent notification filtering based on your neural focus cycles and tasks.", id: "focus" },
+                ].map((meta) => {
+                  const mod = modules.find((m) => m.id === meta.id)!;
+                  return (
+                    <div
+                      key={meta.title}
+                      className={`glass-card rounded-xl p-8 group hover:bg-white/60 transition-all duration-500 cursor-pointer ${mod.enabled ? "" : "opacity-60"}`}
+                      onClick={() =>
+                        setModules((prev) =>
+                          prev.map((m) => (m.id === meta.id ? { ...m, enabled: !m.enabled } : m))
+                        )
+                      }
+                    >
+                      <div className="flex justify-between items-start mb-6">
+                        <div className={`w-12 h-12 flex items-center justify-center rounded-full ${mod.enabled ? "bg-secondary-container text-secondary" : "bg-surface-container text-outline"}`}>
+                          <span className="material-symbols-outlined" style={{ fontVariationSettings: mod.enabled ? "'FILL' 1" : "'FILL' 0" }}>
+                            {meta.icon}
+                          </span>
                         </div>
-                      </label>
-                    </div>
-                    <h4 className="font-headline-lg text-2xl text-primary mb-2">{mod.title}</h4>
-                    <p className="text-on-surface-variant text-sm leading-relaxed mb-6">{mod.desc}</p>
-                    {mod.priority && (
-                      <div className="flex items-center gap-2">
-                        <span className="px-3 py-1 bg-secondary/10 text-secondary text-[10px] font-bold rounded-full uppercase">
-                          Priority
-                        </span>
+                        <label className="relative inline-flex items-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            checked={mod.enabled}
+                            onChange={() =>
+                              setModules((prev) =>
+                                prev.map((m) => (m.id === meta.id ? { ...m, enabled: !m.enabled } : m))
+                              )
+                            }
+                            className="sr-only toggle-checkbox"
+                            type="checkbox"
+                          />
+                          <div className="w-11 h-6 bg-surface-container-highest rounded-full transition-colors toggle-label">
+                            <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform toggle-dot" />
+                          </div>
+                        </label>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      <h4 className="font-headline-lg text-2xl text-primary mb-2">{meta.title}</h4>
+                      <p className="text-on-surface-variant text-sm leading-relaxed mb-6">{meta.desc}</p>
+                      {mod.priority && (
+                        <div className="flex items-center gap-2">
+                          <span className="px-3 py-1 bg-secondary/10 text-secondary text-[10px] font-bold rounded-full uppercase">
+                            Priority
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
 
                 <div className="rounded-xl overflow-hidden relative min-h-[200px]">
                   <div className="absolute inset-0 bg-gradient-to-br from-secondary-container/30 to-tertiary-fixed/30 flex items-end p-6">
